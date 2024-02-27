@@ -7,6 +7,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const (
+	usersTable      = "users"
+	todoListsTable  = "todo_lists"
+	usersListsTable = "users_list"
+	todoItemsTable  = "todo_items"
+	listsItemsTable = "lists_items"
+)
+
 type Config struct {
 	Host     string
 	Port     string
@@ -16,7 +24,7 @@ type Config struct {
 	SSLMode  string
 }
 
-func NewPostgresDB(cfg Config) (*sqlx.DB, error) {
+func NewPostgresDB(cfg Config) (*sqlx.DB, error) { //Правильные параметры строки подключения :"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s"
 	db, err := sqlx.Open("postgres", fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.DBName, cfg.SSLMode))
 	if err != nil {

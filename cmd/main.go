@@ -5,29 +5,37 @@ import (
 	"api/pkg/handler"
 	"api/pkg/repository"
 	"api/pkg/service"
-	"log"
+	"os"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/viper"
 )
 
 func main() {
 
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+
 	if err := initConfig(); err != nil {
-		log.Fatalf("ошибка в инициализации конфигурации: %s", err.Error())
+		logrus.Fatalf("ошибка в инициализации конфигурации: %s", err.Error())
+	}
+
+	if err := godotenv.Load(); err != nil {
+		logrus.Fatalf("ошибка загрузки переменных окружения: %s", err.Error())
 	}
 
 	db, err := repository.NewPostgresDB(repository.Config{
-		Host:     "localhost",
-		Port:     "5436",
-		Username: "postgres",
-		Password: "qwerty",
-		DBName:   "postgres",
-		SSLMode:  "disable",
+		Host:     viper.GetString("db.host"),
+		Port:     viper.GetString("db.port"),
+		Username: viper.GetString("db.username"),
+		DBName:   viper.GetString("db.dbname"),
+		SSLMode:  viper.GetString("db.sslmode"),
+		Password: os.Getenv("DB_PASSWORD"),
 	})
 	if err != nil {
-		log.Fatalf("ошибка инициализации подключения к бд: %s", err.Error())
+		logrus.Fatalf("ошибка инициализации подключения к бд: %s", err.Error())
 	}
 
 	repos := repository.NewRepository(db)
@@ -35,8 +43,8 @@ func main() {
 	handlers := handler.NewHandler(services)
 
 	srv := new(api.Server) //инициализация экземпляра сервера
-	if err := srv.Run(viper.GetString("8000"), handlers.InitRoutes()); err != nil {
-		log.Fatalf("Ошибка запуска сервера: %s", err.Error())
+	if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
+		logrus.Fatalf("Ошибка запуска сервера: %s", err.Error())
 	} // запуск сервера с помощью метода Run
 
 }
