@@ -4,6 +4,7 @@ import (
 	"api"
 	"api/pkg/repository"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 const (
 	salt       = "1f1hno9q8fqil3n2g29gvbmas"
-	signignKey = "gqgw5]gwr2lmrq1qirj2gqrghlz"
+	signingKey = "gqgw5]gwr2lmrq1qirj2gqrghlz"
 	tokenTTL   = 12 * time.Hour
 )
 
@@ -48,7 +49,25 @@ func (s *AuthService) GenerateToken(username, password string) (string, error) {
 		},
 		user.Id,
 	})
-	return token.SignedString([]byte(signignKey))
+	return token.SignedString([]byte(signingKey))
+}
+
+func (s *AuthService) ParseToken(accessToken string) (int, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(signingKey), nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok {
+		return 0, errors.New("токен не соответствует требованиям типа *tokenClaims")
+	}
+	return claims.UserId, nil
 }
 
 func genegatePasswordHash(password string) string {
