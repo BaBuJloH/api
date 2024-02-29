@@ -1,7 +1,7 @@
 package api //файл для стурктур пользовалеля
 
 type User struct {
-	Id       int    `json:"-"`
+	Id       int    `json:"-" db:"id"`
 	Name     string `json:"name" binding:"required"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"` //для валидации наличия данных полей в теле запроса
