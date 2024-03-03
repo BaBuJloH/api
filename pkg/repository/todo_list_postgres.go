@@ -20,8 +20,9 @@ func NewTodoListPostgres(db *sqlx.DB) *TodoListPostgres {
 func (r *TodoListPostgres) Create(userId int, list api.TodoList) (int, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
+
 	var id int
 	createListQuery := fmt.Sprintf("INSERT INTO %s (title, description) VALUES ($1, $2) RETURNING id", todoListsTable)
 	row := tx.QueryRow(createListQuery, list.Title, list.Description)
@@ -37,4 +38,22 @@ func (r *TodoListPostgres) Create(userId int, list api.TodoList) (int, error) {
 	}
 
 	return id, tx.Commit()
+}
+
+func (r *TodoListPostgres) GetAll(userId int) ([]api.TodoList, error) {
+	var lists []api.TodoList //слайс списка
+	query := fmt.Sprintf("SELECT tl.id, tl.title, tl.description FROM %s tl INNER JOIN %s ul on tl.id = ul.list_id WHERE ul.user_id = $1", todoListsTable, usersListsTable)
+	err := r.db.Select(&lists, query, userId)
+
+	return lists, err
+}
+
+func (r *TodoListPostgres) GetById(userId, listId int) (api.TodoList, error) {
+	var list api.TodoList
+
+	query := fmt.Sprintf(`SELECT tl.id, tl.title, tl.description FROM %s tl 
+						INNER JOIN %s ul on tl.id = ul.list_id WHERE ul.user_id = $1 AND ul.list_id = $2`, todoListsTable, usersListsTable)
+	err := r.db.Get(&list, query, userId, listId)
+
+	return list, err
 }
