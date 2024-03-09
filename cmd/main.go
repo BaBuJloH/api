@@ -5,7 +5,10 @@ import (
 	"api/pkg/handler"
 	"api/pkg/repository"
 	"api/pkg/service"
+	"context"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -43,10 +46,27 @@ func main() {
 	handlers := handler.NewHandler(services)
 
 	srv := new(api.Server) //инициализация экземпляра сервера
-	if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
-		logrus.Fatalf("Ошибка запуска сервера: %s", err.Error())
-	} // запуск сервера с помощью метода Run
 
+	go func() {
+		if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
+			logrus.Fatalf("Ошибка запуска сервера: %s", err.Error())
+		} // запуск сервера с помощью метода Run
+	}()
+	logrus.Print("Приложение api запустилось")
+
+	quit := make(chan os.Signal, 1)                      //канал для блокировки main функции
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT) //запись в канал происходит при получении сигналов системы
+	<-quit
+
+	logrus.Print("api Shutting down")
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		logrus.Errorf("ошибка закрытия соединения с сервером: %s", err.Error())
+	}
+
+	if err := db.Close(); err != nil {
+		logrus.Errorf("ошибка закрытия соединения с базой данных: %s", err.Error())
+	}
 }
 
 func initConfig() error {
